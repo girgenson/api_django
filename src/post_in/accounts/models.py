@@ -5,7 +5,7 @@ from django.db.models import (EmailField, CharField, BooleanField, DateTimeField
 class UserManager(BaseUserManager):
     use_in_migrations = True
 
-    def _create_user(self, email, password=None, first_name=None, last_name=None,
+    def create_user(self, email, password=None, first_name=None, last_name=None,
                      is_active=None, is_staff=None, is_admin=None, **extra_fields):
         """
         Create and save a user with the given username, email, and password.
@@ -23,21 +23,15 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_user(self, username, email=None, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', False)
-        extra_fields.setdefault('is_superuser', False)
-        return self._create_user(username, email, password, **extra_fields)
+    def create_superuser(self, email, password=None, first_name=None, **extra_fields):
+        user = self.create_user(email, first_name=first_name, password=password,
+                                is_staff=True, is_admin=True)
+        return user
 
-    def create_superuser(self, username, email, password, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
-
-        return self._create_user(username, email, password, **extra_fields)
+    def create_staff_user(self, email, password=None, first_name=None, **extra_fields):
+        user = self.create_user(email, first_name=first_name, password=password,
+                                is_staff=True, is_admin=True)
+        return user
 
 
 class User(AbstractBaseUser):
@@ -45,7 +39,7 @@ class User(AbstractBaseUser):
     first_name = CharField(max_length=255, blank=True, null=True)
     last_name = CharField(max_length=255, blank=True, null=True)
     staff = BooleanField(default=False)
-    is_active = BooleanField(default=False)
+    is_active = BooleanField(default=True)
     admin = BooleanField(default=False)
     timestamp = DateTimeField(auto_now_add=True)
 
@@ -53,4 +47,37 @@ class User(AbstractBaseUser):
     REQUIRED_FIELDS = []
 
     objects = UserManager
+
+    def __str__(self):
+        return self.email
+
+    def get_short_name(self):
+        if self.first_name:
+            return self.first_name
+        return self.email
+
+    def get_last_name(self):
+        if self.last_name:
+            return self.last_name
+        return self.email
+
+    def has_perm(self, perm, obj=None):
+        return True
+
+    def has_module_perms(self, app_label):
+        return True
+
+    @property
+    def is_staff(self):
+        if self.admin:
+            return True
+        return self.staff
+
+    @property
+    def is_admin(self):
+        return self.admin
+
+    def save(self, *args, **kwargs):
+        print(self.password)
+        super().save(*args, **kwargs)
 
