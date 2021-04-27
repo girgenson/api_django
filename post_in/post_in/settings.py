@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'accounts',
     'notes',
     'rest_framework',
+    'api', 
 ]
 
 
